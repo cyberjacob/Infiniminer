@@ -437,6 +437,8 @@ namespace Infiniminer
             return "";
         }
 
+        uint duplicateNameCount = 0;
+
         public InfiniminerServer()
         {
             Console.SetWindowSize(1, 1);
@@ -1003,11 +1005,15 @@ namespace Infiniminer
                         {
                             string teamIdent = "";
                             if (p.Team == PlayerTeam.Red)
+                            {
                                 teamIdent = " (R)";
+                            }
                             else if (p.Team == PlayerTeam.Blue)
+                            {
                                 teamIdent = " (B)";
-                            ConsoleWrite(p.Handle + teamIdent);
-                            ConsoleWrite("  - " + p.IP);
+                                ConsoleWrite(p.Handle + teamIdent);
+                                ConsoleWrite("  - " + p.IP);
+                            }
                         }
                     }
                     break;
@@ -1509,9 +1515,52 @@ namespace Infiniminer
                 {
                     try
                     {
+<<<<<<< HEAD
                         switch (msgType)
                         {
                             case NetMessageType.ConnectionApproval:
+=======
+                        case NetMessageType.ConnectionApproval:
+                            {
+                                Player newPlayer = new Player(msgSender, null);
+                                newPlayer.Handle = InfiniminerGame.Sanitize(msgBuffer.ReadString()).Trim();
+                                if (newPlayer.Handle.Length == 0 || newPlayer.Handle.Length > 20)
+                                {
+                                    newPlayer.Handle = "Player";
+                                }
+
+                                foreach (Player oldPlayer in this.playerList.Values)
+                                {
+                                    if (newPlayer.Handle == oldPlayer.Handle)
+                                    {
+                                        this.duplicateNameCount++;
+                                        newPlayer.Handle += "." + this.duplicateNameCount.ToString();
+                                        break;
+                                    }
+                                }
+
+                                string clientVersion = msgBuffer.ReadString();
+                                if (clientVersion != InfiniminerGame.INFINIMINER_VERSION)
+                                {
+                                    msgSender.Disapprove("VER;" + InfiniminerGame.INFINIMINER_VERSION);
+                                }
+                                else if (banList.Contains(newPlayer.IP))
+                                {
+                                    msgSender.Disapprove("BAN;");
+                                }
+                                else
+                                {
+                                    playerList[msgSender] = newPlayer;
+                                    this.netServer.SanityCheck(msgSender);
+                                    msgSender.Approve();
+                                }
+                            }
+                            break;
+
+                        case NetMessageType.StatusChanged:
+                            {
+                                if (!this.playerList.ContainsKey(msgSender))
+>>>>>>> upstream/master
                                 {
                                     Player newPlayer = new Player(msgSender, null);
                                     newPlayer.Handle = Defines.Sanitize(msgBuffer.ReadString()).Trim();
@@ -1690,6 +1739,7 @@ namespace Infiniminer
                                             }
                                             break;
 
+<<<<<<< HEAD
                                         case InfiniminerMessage.PlayerDead:
                                             {
                                                 ConsoleWrite("PLAYER_DEAD: " + player.Handle);
@@ -1710,6 +1760,32 @@ namespace Infiniminer
                                                     foreach (NetConnection netConn in playerList.Keys)
                                                         if (netConn.Status == NetConnectionStatus.Connected)
                                                             netServer.SendMessage(msgBuffer, netConn, NetChannel.ReliableInOrder3);
+=======
+                                    case InfiniminerMessage.PlayerDead:
+                                        {
+                                            string deathMessage = InfiniminerGame.Sanitize(msgBuffer.ReadString());
+                                            ConsoleWrite("PLAYER_DEAD: " + player.Handle + " " + deathMessage);
+
+                                            player.Ore = 0;
+                                            player.Cash = 0;
+                                            player.Weight = 0;
+                                            player.Alive = false;
+                                            SendResourceUpdate(player);
+                                            SendPlayerDead(player);
+
+                                            if (deathMessage != "")
+                                            {
+                                                msgBuffer = netServer.CreateBuffer();
+                                                msgBuffer.Write((byte)InfiniminerMessage.ChatMessage);
+                                                msgBuffer.Write((byte)(player.Team == PlayerTeam.Red ? ChatMessageType.SayRedTeam : ChatMessageType.SayBlueTeam));
+                                                msgBuffer.Write(player.Handle + " " + deathMessage);
+                                                foreach (NetConnection netConn in playerList.Keys)
+                                                {
+                                                    if (netConn.Status == NetConnectionStatus.Connected)
+                                                    {
+                                                        netServer.SendMessage(msgBuffer, netConn, NetChannel.ReliableInOrder3);
+                                                    }
+>>>>>>> upstream/master
                                                 }
                                             }
                                             break;
